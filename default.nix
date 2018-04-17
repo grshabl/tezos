@@ -301,6 +301,8 @@ rec {
     # check to make sure we have a working package... show the first few lines of the built in help
     postRPMInstall = ''
       /opt/tezos/bin/tezos-node --help=plain | head
+      /opt/tezos/bin/tezos-client --help | head
+      /opt/tezos/bin/tezos-admin-client --help | head
     '';
   };
 
