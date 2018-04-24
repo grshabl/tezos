@@ -363,6 +363,50 @@ rec {
     phases = [ "unpackPhase" ];
     nativeBuildInputs = [node client baker-alpha];
   };
+  bolosSdk13 = pkgs.stdenv.mkDerivation {
+    name = "bolos-sdk-1.3.4";
+    src = pkgs.fetchgit {
+      url = "https://github.com/LedgerHQ/nanos-secure-sdk/";
+      rev = "1525802dda0b5437439c61b79f49e632b2080d14";
+      sha256 = "1r63711cifzqy5b4pj9cm076nnq5zafqz5my7ygrwpxqdphwqdm5";
+      fetchSubmodules = true;
+    };
+    # XXX this interface may be unstable across nixpkgs versions; best remedy is get this into nixpkgs?
+    setupHook = world.pkgs.writeText "setupHook.sh" ''
+      setBolosSDK () {
+        export BOLOS_SDK="$1/"
+      }
+      addEnvHooks "$hostOffset" setBolosSDK
+    '';
+  }
+  bolosClang = pkgs.stdenv.mkDerivation {
+    name = "bolos-clang-4.0.1-1";
+    src = pkgs.fetchzip {
+      url = "http://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-debian8.tar.xz";
+      sha256 = "1wbni5wjcskl39r3rp4cdzd2bnq5i9hcw0vpcp8k44bbhy9wmcwx";
+    };
+  };
+  bolosGcc = pkgs.stdenv.mkDerivation {
+    name = "bolos-gcc-5.3-2016q1-20160330-1";
+    src = pkgs.fetchzip {
+      url = "https://launchpad.net/gcc-arm-embedded/5.0/5-2016-q1-update/+download/gcc-arm-none-eabi-5_3-2016q1-20160330-linux.tar.bz2";
+      sha256 = "0y05y24gbb011qya8dqmfaj8ajjhdqc643cb0xmjf75cwq80igcb";
+    };
+  };
+  bolosEnv = pkgs.stdenv.mkDerivation {
+    name = "bolos-env";
+    clang = bolosClang;
+    src = bolosGcc;
+    postUnpack = ''
+      ln -s "''$bolosClang" clang-arm-fropi
+    '';
+    setupHook = world.pkgs.writeText "setupHook.sh" ''
+      setBolosEnv () {
+        export BOLOS_ENV="$1/"
+      }
+      addEnvHooks "$hostOffset" setBolosEnv
+    '';
+  };
   bolosApp = pkgs.stdenv.mkDerivation (rec {
     name = "tezos-bolos-app";
     src = pkgs.fetchFromGitHub {
@@ -373,31 +417,15 @@ rec {
       sha256 = "048dc1y8j59mirw1hp1sqj8dsbisvd7n645znb0a53i7g3bklhvp";
       fetchSubmodules = true;
     };
-    postPatch = ''
-      sed -i -e '/^CLANGPATH :/d' Makefile
-    '';
-    BOLOS_SDK = pkgs.fetchgit {
-      url = "https://github.com/LedgerHQ/nanos-secure-sdk/";
-      rev = "1525802dda0b5437439c61b79f49e632b2080d14";
-      sha256 = "1r63711cifzqy5b4pj9cm076nnq5zafqz5my7ygrwpxqdphwqdm5";
-      fetchSubmodules = true;
-    };
-    gcc = pkgs.fetchzip {
-      url = "https://launchpad.net/gcc-arm-embedded/5.0/5-2016-q1-update/+download/gcc-arm-none-eabi-5_3-2016q1-20160330-linux.tar.bz2";
-      sha256 = "0y05y24gbb011qya8dqmfaj8ajjhdqc643cb0xmjf75cwq80igcb";
-    };
-    GCCPATH = "${gcc}/";
-    clang = pkgs.fetchzip {
-      url = "http://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-debian8.tar.xz";
-      sha256 = "1wbni5wjcskl39r3rp4cdzd2bnq5i9hcw0vpcp8k44bbhy9wmcwx";
-    };
+    # postPatch = ''
+    #   sed -i -e '/^CLANGPATH :/d' Makefile
+    # '';
     zlib = pkgs.zlib;
     ncurses5 = pkgs.ncurses5;
     stdcc = pkgs.stdenv.cc.cc.lib;
     postEnv = ''
       LD_LIBRARY_PATH="''${LD_LIBRARY_PATH}:${clang}/lib:${zlib}/lib:${ncurses5}/lib:${stdcc}/lib"
     '';
-    CLANGPATH = "${clang}/bin/";
   });
 }
 
