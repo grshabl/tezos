@@ -411,6 +411,8 @@ rec {
       , max_peer_id
       , expected_connections
       , time_between_blocks
+      , bakeMonitor ? tezos-bake-monitor
+      , loadTest ? tezos-loadtest
       # TODO: protocol parameters, especially time_between_blocks
   } : pkgs.stdenv.mkDerivation {
     name = "tezos-sandbox";
@@ -593,7 +595,7 @@ rec {
       #!/usr/bin/env bash
       set -ex
       for bootstrapid in \$(seq 1 "\''${1:-3}") ; do
-        # ${tezos-bake-monitor}/bin/tezos-bake-monitor --port "\$((9800 + bootstrapid))" --rpchost "http://127.0.0.1:\$((18730 + bootstrapid))" -- $out/bin/tezos-sandbox-client.sh launch daemon bootstrap\$bootstrapid -B -E -D >${datadir}/clientd-bootstrap\$bootstrapid.log 2>&1 &
+        # ${bakeMonitor}/bin/tezos-bake-monitor --port "\$((9800 + bootstrapid))" --rpchost "http://127.0.0.1:\$((18730 + bootstrapid))" -- $out/bin/tezos-sandbox-client.sh launch daemon bootstrap\$bootstrapid -B -E -D >${datadir}/clientd-bootstrap\$bootstrapid.log 2>&1 &
         $out/bin/tezos-sandbox-client.sh launch daemon bootstrap\$bootstrapid -B -E -D >${datadir}/clientd-bootstrap\$bootstrapid.log 2>&1 &
       done
       EOF_BOOTBAKE
@@ -653,7 +655,7 @@ rec {
       done
 
       # echo "Generating transactions.  (press ^C at any time)"
-      ${tezos-loadtest}/bin/tezos-loadtest "${datadir}/loadtest-config.json"
+      ${loadTest}/bin/tezos-loadtest "${datadir}/loadtest-config.json"
       EOF_THEWORKS
 
       chmod +x $out/bin/*.sh
@@ -673,20 +675,30 @@ rec {
 
   docker-image =
   let
+    # myBakeMonitor = pkgs.haskell.lib.justStaticExecutables(tezos-bake-monitor);
+    # myBakeCentral = tezos-bake-central;
+    myLoadTest = pkgs.haskell.lib.justStaticExecutables tezos-loadtest;
+
     mySandbox = sandbox-env {
         expected_pow = "20";
         datadir = "./sandbox";
         max_peer_id = "9";
         expected_connections = "3";
         time_between_blocks = "[5, 5]";
+        bakeMonitor = myBakeCentral;
+        loadTest = myLoadTest;
       };
   in pkgs.dockerTools.buildImage {
     name = "tezos";
     contents = [
       node client
       mySandbox
-      tezos-bake-monitor
-      tezos-loadtest
+      # myBakeMonitor
+      # myBakeCentral
+      myLoadTest
+      # tezos-bake-monitor
+      # tezos-bake-central
+      # tezos-loadtest
       pkgs.jq
       pkgs.tzdata
       pkgs.iana-etc # required for: https://github.com/mirage/ocaml-conduit/issues/79
@@ -697,7 +709,7 @@ rec {
       ln -s ${pkgs.tzdata}/share/zoneinfo/UTC /etc/localtime
 
     '';
-    keepContentsDirlinks = true;
+    # keepContentsDirlinks = true;
     config = {
       Env = [
         # When shell=true, mesos invokes "sh -c '<cmd>'", so make sure "sh" is on the PATH.
