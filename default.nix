@@ -1,8 +1,8 @@
 { pkgs ?  import ((import <nixpkgs> {}).fetchFromGitHub {
     owner = "NixOS";
     repo = "nixpkgs";
-    rev = "b6ddb9913f2b8206837e0f137db907bdefb9275e";
-    sha256 = "1yjbd5jhjgirv7ki0sms1x13dqyjzg0rpb7n67m6ik61fmpq0nfw";
+    rev = "2a17d7ca3018d2dedbdaa226a7c601f5b7f9f52c";
+    sha256 = "1mb2k9gw2s58lqvxp89xxl89gq3ggkxpxapi1rvsr92rjwla72mp";
   }) {}
 }:
 
@@ -418,8 +418,7 @@ rec {
 
     configurePhase = "true";
     installPhase = "true";
-    nativeBuildInputs = [pkgs.psmisc pkgs.jq node client];
-    buildInputs = [pkgs.bash node client baker-alpha tezos-bake-monitor tezos-loadtest];
+    nativeBuildInputs = [ pkgs.jq ];
     buildPhase = ''
       mkdir -p $out/bin
       mkdir -p $out/client
@@ -672,44 +671,49 @@ rec {
 
   tezos-bake-central = pkgs.callPackage ./tezos-bake-central {};
 
-  # docker-image =
-  # let
-  #   pkgs = (import <nixpkgs> {});
-  #   mySandbox = sandbox-env {
-  #       expected_pow = "20";
-  #       datadir = "./sandbox";
-  #       max_peer_id = "9";
-  #       expected_connections = "3";
-  #       time_between_blocks = "[5, 5]";
-  #     };
-  # in pkgs.dockerTools.buildImage {
-  #   name = "tezos";
-  #   contents = [
-  #     mySandbox
-  #     node
-  #     client
-  #     tezos-bake-monitor
-  #     tezos-loadtest
-  #     pkgs.jq
-  #   ];
-  #   keepContentsDirlinks = true;
-  #   config = {
-  #     Env = [
-  #       # When shell=true, mesos invokes "sh -c '<cmd>'", so make sure "sh" is
-  #       # on the PATH.
-  #       ("PATH=" + builtins.concatStringsSep(":")([
-  #         "${pkgs.stdenv.shellPackage}/bin"
-  #         "${pkgs.coreutils}/bin"
-  #         "${node}/bin"
-  #         "${client}/bin"
-  #         "${mySandbox}/bin"
-  #         "${pkgs.jq}/bin"
-  #         ]))
-  #     ];
-  #     # Cmd = [ "${mySandbox}/bin/tezos-sandbox-theworks.sh" ];
-  #     Cmd = [ "${mySandbox}/bin/tezos-sandbox-theworks.sh" ];
-  #   };
-  # };
+  docker-image =
+  let
+    mySandbox = sandbox-env {
+        expected_pow = "20";
+        datadir = "./sandbox";
+        max_peer_id = "9";
+        expected_connections = "3";
+        time_between_blocks = "[5, 5]";
+      };
+  in pkgs.dockerTools.buildImage {
+    name = "tezos";
+    contents = [
+      node client
+      mySandbox
+      tezos-bake-monitor
+      tezos-loadtest
+      pkgs.jq
+      pkgs.tzdata
+      pkgs.iana-etc # required for: https://github.com/mirage/ocaml-conduit/issues/79
+    ];
+    runAsRoot = ''
+      ${pkgs.dockerTools.shadowSetup}
+      mkdir -p /etc
+      ln -s ${pkgs.tzdata}/share/zoneinfo/UTC /etc/localtime
+
+    '';
+    keepContentsDirlinks = true;
+    config = {
+      Env = [
+        # When shell=true, mesos invokes "sh -c '<cmd>'", so make sure "sh" is on the PATH.
+        ("PATH=" + builtins.concatStringsSep(":")([
+          "${pkgs.stdenv.shellPackage}/bin"
+          "${pkgs.coreutils}/bin"
+          "${node}/bin"
+          "${client}/bin"
+          "${mySandbox}/bin"
+          "${pkgs.jq}/bin"
+          ]))
+      ];
+      # Cmd = [ "${mySandbox}/bin/tezos-sandbox-theworks.sh" ];
+      Cmd = [ "${mySandbox}/bin/tezos-sandbox-bootstrap.sh" ];
+    };
+  };
 
 }
 
