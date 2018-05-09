@@ -648,7 +648,7 @@ rec {
 
       for i in \$(seq 1 "\$#") ; do
           echo "LAUNCH BAKER:" "\''${!i}"
-          tezos-bake-monitor --port \$((9800 + i)) --rpchost 127.0.0.1:\$(((i - 1) % ${max_peer_id} + 18731)) --client $out/bin/tezos-sandbox-client.sh --identity "\''${!i}" & pid=\$!
+          ${bakeMonitor}/bin/tezos-bake-monitor --port \$((9800 + i)) --rpchost 127.0.0.1:\$(((i - 1) % ${max_peer_id} + 18731)) --client $out/bin/tezos-sandbox-client.sh --identity "\''${!i}" & pid=\$!
           sleep 1
           if ! kill -0 \$pid; then
               echo >&2 "Problem launching tezos-bake-monitor: \$pid"
@@ -696,9 +696,11 @@ rec {
 
   docker-image =
   let
+    myBakeMonitor = tezos-bake-monitor;
     # myBakeMonitor = pkgs.haskell.lib.justStaticExecutables(tezos-bake-monitor);
-    # myBakeCentral = tezos-bake-central;
-    myLoadTest = pkgs.haskell.lib.justStaticExecutables tezos-loadtest;
+    myBakeCentral = tezos-bake-central;
+    # myLoadTest = pkgs.haskell.lib.justStaticExecutables tezos-loadtest;
+    myLoadTest = tezos-loadtest;
 
     mySandbox = sandbox-env {
         expected_pow = "20";
@@ -706,7 +708,7 @@ rec {
         max_peer_id = "9";
         expected_connections = "3";
         time_between_blocks = "[5, 5]";
-        bakeMonitor = myBakeCentral;
+        bakeMonitor = myBakeMonitor;
         loadTest = myLoadTest;
       };
   in pkgs.dockerTools.buildImage {
@@ -714,8 +716,7 @@ rec {
     contents = [
       node client
       mySandbox
-      # myBakeMonitor
-      # myBakeCentral
+      myBakeMonitor
       myLoadTest
       # tezos-bake-monitor
       # tezos-bake-central
