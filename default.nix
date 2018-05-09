@@ -432,13 +432,18 @@ rec {
       , time_between_blocks
       , bakeMonitor ? tezos-bake-monitor
       , loadTest ? tezos-loadtest
+      , bakeCentral ? tezos-bake-central
       # TODO: protocol parameters, especially time_between_blocks
   } : pkgs.stdenv.mkDerivation {
     name = "tezos-sandbox";
     # src = lib.sourceByRegex ./. ["tezos.scripts.*" "tezos-loadtest.*"];
     sourceRoot = ".";
-    srcs = [./tezos/scripts  ./tezos-load-testing ];
-
+    srcs = [
+      ./tezos/scripts 
+      ./tezos-load-testing
+      ./tezos-bake-monitor/tezos-bake-central/config
+      ./tezos-bake-monitor/tezos-bake-central/exe-config
+    ];
     configurePhase = "true";
     installPhase = "true";
     nativeBuildInputs = [ pkgs.jq ];
@@ -463,8 +468,8 @@ rec {
         declare -a node_args
         node_args=("--config-file=$out/node-$nodeid/config.json"
             "--data-dir=${datadir}/node-$nodeid"
-            "--rpc-addr=127.0.0.1:$((18730 + nodeid))"
-            "--net-addr=127.0.0.1:$((19730 + nodeid))"
+            "--rpc-addr=0.0.0.0:$((18730 + nodeid))"
+            "--net-addr=0.0.0.0:$((19730 + nodeid))"
             "--expected-pow=${expected_pow}"
             "--closed"
             "--no-bootstrap-peers"
@@ -476,6 +481,11 @@ rec {
         done
         ${node}/bin/tezos-node config init "''${node_args[@]}"
       done
+
+      mkdir -p $out/bake-central-config
+      mkdir -p $out/bake-central-exe-config
+      cp ./config/* $out/bake-central-config
+      cp ./exe-config/* $out/bake-central-exe-config
 
       cat > $out/bin/sandbox-env.inc.sh << EOF_ENVIRON
       SANDBOX_DATADIR="${datadir}"
@@ -657,6 +667,17 @@ rec {
       done
       EOF_MONITBAKER
 
+      cat > $out/bin/bake-central.sh <<EOF_BAKECENTRAL
+      set -eux
+      mkdir -p ${datadir}/baker-central/config
+      mkdir -p ${datadir}/baker-central/exe-config
+      cp -n $out/bake-central-config/* ${datadir}/baker-central/config
+      cp -n $out/bake-central-exe-config/* ${datadir}/baker-central/exe-config
+
+      cd ${datadir}/baker-central
+      exec ${bakeCentral}/backend
+      EOF_BAKECENTRAL
+
       cat > $out/bin/tezos-sandbox-theworks.sh <<EOF_THEWORKS
       #!/usr/bin/env bash
       set -ex
@@ -677,7 +698,10 @@ rec {
 
       # echo "Generating transactions.  (press ^C at any time)"
       ${loadTest}/bin/tezos-loadtest "${datadir}/loadtest-config.json"
+      # ${loadTest}/bin/tezos-loadtest "${datadir}/loadtest-config.json" 2>&1 > ${datadir}/loadtest.log &
+      # $out/bin/bake-central.sh
       EOF_THEWORKS
+
 
       chmod +x $out/bin/*.sh
 
