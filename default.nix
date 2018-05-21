@@ -525,6 +525,9 @@ rec {
             with fitness ${expected_pow} \
             and key dictator \
             and parameters ${datadir}/protocol_parameters.json
+        while [ ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK != "$($out/bin/tezos-sandbox-client.sh rpc call blocks/head/protocol)" ]; do
+          sleep 1
+        done
       EOF_ALPHANET
 
       # create wrapper around client programs, setting arguments for working
