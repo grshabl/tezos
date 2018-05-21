@@ -70,9 +70,10 @@ rec {
         src = tezos/vendors/ocplib-resto/lib_resto-directory;
       }
       {
-        packageName = "tweetnacl";
+        packageName = "hacl";
         version = "dev";
-        src = tezos/vendors/ocaml-tweetnacl;
+        src = tezos/vendors/ocaml-hacl;
+        opamFile = "hacl.opam";
       }
       {
         packageName = "blake2";
