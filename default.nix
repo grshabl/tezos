@@ -70,9 +70,9 @@ rec {
         src = tezos/vendors/ocplib-resto/lib_resto-directory;
       }
       {
-        packageName = "tweetnacl";
+        packageName = "hacl";
         version = "dev";
-        src = tezos/vendors/ocaml-tweetnacl;
+        src = tezos/vendors/ocaml-hacl;
       }
       {
         packageName = "blake2";
@@ -124,6 +124,16 @@ rec {
           sha256= "017cnl6w6bggcc3db697xprr881gp3fnrl913mp6dvrns46gj2pa";
           fetchSubmodules= true;
         };
+      }
+      {
+        packageName = "tezos-signer-services";
+        version = "0.0.0";
+        src = tezos/src/lib_signer_services;
+      }
+      {
+        packageName = "tezos-signer-backends";
+        version = "0.0.0";
+        src = tezos/src/lib_signer_backends;
       }
       {
         packageName = "tezos-clic";
