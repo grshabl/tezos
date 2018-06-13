@@ -108,8 +108,8 @@ rec {
         # src = tezos/vendors/ocaml-hidapi;
         src = pkgs.fetchgit {
           url= "https://github.com/vbmithr/ocaml-hidapi";
-          rev= "21c4a1ecd16542e89547f99e34de8441bc913611";
-          sha256= "0rpi6fs6mr5kl58pjxpllds71s4nyfskjikpl333y9bcdaimd3r6";
+          rev= "6d232b19e68a265acbb25d6194caa937cd64ba1f";
+          sha256= "017cnl6w6bggcc3db697xprr881gp3fnrl913mp6dvrns46gj2pa";
           fetchSubmodules= true;
         };
       }
@@ -466,7 +466,7 @@ rec {
             "--rpc-addr=127.0.0.1:$((18730 + nodeid))"
             "--net-addr=127.0.0.1:$((19730 + nodeid))"
             "--expected-pow=${expected_pow}"
-            "--private-mode"
+            "--closed"
             "--no-bootstrap-peers"
             "--connections=${expected_connections}"
             "--log-output=${datadir}/node-$nodeid.log"
@@ -588,7 +588,7 @@ rec {
 
       # logfile is already redirected by config
       if [ "\$1" == "run" ] ; then
-        node_args=("\''${node_args[@]}" "--sandbox=$out/sandbox.json" "--private-mode" "--no-bootstrap-peers")
+        node_args=("\''${node_args[@]}" "--sandbox=$out/sandbox.json" "--closed" "--no-bootstrap-peers")
         if [ "\$nodeid" -eq 1 ] ; then
           node_args=("\''${node_args[@]}" \$(printf -- "--peer=127.0.0.1:%s\n" \$(for i in "\''${fragile_peers[@]}" ; do echo \$((19730 + i)) ; done)))
         elif [ \$(( "\$nodeid" % 2 )) -eq 0 ] ; then
