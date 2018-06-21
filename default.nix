@@ -615,9 +615,10 @@ rec {
 
       # don't start the load test until some progress has been made by the bootstrap bakers.
       while true ; do
-        blockhead="\$(tezos-sandbox-client.sh rpc call /blocks/head with '{}' 2>/dev/null)"
+        tezos-sandbox-client.sh rpc get /chains/main/blocks/head
+        blockhead="\$(tezos-sandbox-client.sh rpc get /chains/main/blocks/head 2>/dev/null)"
         blockhead_ok=\$?
-        if [ \$blockhead_ok -eq 0 -a 3 -le "\$(jq '.level' <<< "\$blockhead")" ] ; then
+        if [ \$blockhead_ok -eq 0 -a 3 -le "\$(jq '.header.level' <<< "\$blockhead")" ] ; then
           break
         else
           sleep 1
